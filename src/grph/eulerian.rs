@@ -24,6 +24,116 @@ pub fn eulerian_path(v: usize, m: usize, adj: &[Vec<usize>]) -> Vec<usize> {
     path
 }
 
+pub struct EulerianCycleIter<'a> {
+    adj: &'a [Vec<usize>],
+    adjt: Vec<Vec<usize>>,
+    next: Vec<usize>,
+    visited: Vec<bool>,
+    skipped: Vec<bool>,
+    b: Vec<usize>,
+    c: usize,
+    m: usize,
+    v0: usize,
+    u: usize,
+    pending_vertex: Option<usize>,
+    done: bool,
+}
+
+impl<'a> EulerianCycleIter<'a> {
+    pub fn new(m: usize, adj: &'a [Vec<usize>]) -> Self {
+        let n = adj.len();
+        let mut adjt = vec![vec![]; n];
+        if m > 0 {
+            for u in 0..n {
+                for &v in &adj[u] {
+                    adjt[v].push(u);
+                }
+            }
+        }
+        let mut visited = vec![false; n];
+        let v0 = 0;
+        if n > 0 {
+            visited[v0] = true;
+        }
+        Self {
+            adj,
+            adjt,
+            next: vec![0; n],
+            visited,
+            skipped: vec![false; n],
+            b: vec![0; n],
+            c: 0,
+            m,
+            v0,
+            u: v0,
+            pending_vertex: None,
+            done: m == 0,
+        }
+    }
+}
+
+impl<'a> Iterator for EulerianCycleIter<'a> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(v) = self.pending_vertex.take() {
+            return Some(v);
+        }
+        if self.done {
+            return None;
+        }
+        while self.c < self.m {
+            self.next[self.u] += 1;
+            let i = self.next[self.u];
+            let in_deg = self.adjt[self.u].len();
+            let out_deg = self.adj[self.u].len();
+            if i <= in_deg {
+                let v = self.adjt[self.u][i - 1];
+                if !self.visited[v] {
+                    if v != self.v0 {
+                        self.b[v] = self.u;
+                        self.visited[v] = true;
+                    }
+                    self.u = v;
+                }
+            } else {
+                let mut j = i - in_deg;
+                if j <= out_deg
+                    && self.adj[self.u][j - 1] == self.b[self.u]
+                    && !self.skipped[self.u]
+                {
+                    self.skipped[self.u] = true;
+                    self.next[self.u] += 1;
+                    j += 1;
+                }
+                let v = if j > out_deg {
+                    self.b[self.u]
+                } else {
+                    self.adj[self.u][j - 1]
+                };
+                let prev_u = self.u;
+                self.u = v;
+                self.c += 1;
+                if self.c == self.m {
+                    self.done = true;
+                }
+                if self.c == 1 {
+                    self.pending_vertex = Some(v);
+                    return Some(prev_u);
+                } else {
+                    return Some(v);
+                }
+            }
+        }
+        None
+    }
+}
+
+// https://arxiv.org/pdf/2508.05251
+pub fn eulerian_cycle(m: usize, adj: &[Vec<usize>]) -> EulerianCycleIter<'_> {
+    EulerianCycleIter::new(m, adj)
+}
+
 pub fn tree_euler_tour(n: usize, dfs: &[usize], pos: &[usize], ss: &[usize]) -> Vec<usize> {
     let mut et = Vec::with_capacity(n * 2);
     let mut stack = Vec::with_capacity(n);

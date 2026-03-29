@@ -1708,7 +1708,7 @@ where
     }
 
     /// O(n log n) ex.
-    pub fn solve(&mut self) {
+    pub fn calc(&mut self) {
         self.mtl.fill(usize::MAX);
         self.mtr.fill(usize::MAX);
         for i in 0..self.n {
@@ -1729,7 +1729,7 @@ where
     }
 
     /// O(n log n)
-    pub fn solve_whp(&mut self) {
+    pub fn calc_whp(&mut self) {
         self.mtl.fill(usize::MAX);
         self.mtr.fill(usize::MAX);
         for j in 0..self.n {

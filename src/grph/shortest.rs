@@ -1,3 +1,5 @@
+use num::zero;
+
 use crate::ds::bit_vec::BitVec;
 use crate::ds::score::MinScore;
 use std::{collections::BinaryHeap, ops::Add};
@@ -202,6 +204,85 @@ pub fn recover_path(u: usize, v: usize, p: &[Vec<usize>]) -> Vec<usize> {
     }
     path.reverse();
     path
+}
+
+// https://arxiv.org/pdf/2510.22721
+pub fn dijkstra_bellman_ford<T>(s: usize, h: usize, adj: &[Vec<(usize, T)>]) -> Vec<Option<T>>
+where
+    T: Copy + PartialOrd + Add<T, Output = T> + Default,
+{
+    let n = adj.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let mut d = vec![None; n];
+    d[s] = Some(T::default());
+    let mut q = BinaryHeap::new();
+    q.push(MinScore(T::default(), s));
+    if h == 0 {
+        let mut seen = BitVec::new(n, false);
+        while let Some(MinScore(dist_v, v)) = q.pop() {
+            if seen[v] {
+                continue;
+            }
+            if d[v] != Some(dist_v) {
+                continue;
+            }
+            seen.set(v, true);
+            for &(x, w) in &adj[v] {
+                if w < T::default() {
+                    continue;
+                }
+                let nd = dist_v + w;
+                if d[x].is_none() || Some(nd) < d[x] {
+                    d[x] = Some(nd);
+                    q.push(MinScore(nd, x));
+                }
+            }
+        }
+        return d;
+    }
+    let mut it = 0;
+    while !q.is_empty() && it < h {
+        it += 1;
+        let mut a = Vec::new();
+        let mut seen = BitVec::new(n, false);
+        while let Some(MinScore(dist_v, v)) = q.pop() {
+            if seen[v] {
+                continue;
+            }
+            if d[v] != Some(dist_v) {
+                continue;
+            }
+            seen.set(v, true);
+            a.push(v);
+            for &(x, w) in &adj[v] {
+                if w < T::default() {
+                    continue;
+                }
+                let nd = dist_v + w;
+                if d[x].is_none() || Some(nd) < d[x] {
+                    d[x] = Some(nd);
+                    q.push(MinScore(nd, x));
+                }
+            }
+        }
+        for &v in &a {
+            if let Some(dv) = d[v] {
+                for &(x, w) in &adj[v] {
+                    if w >= T::default() {
+                        continue;
+                    }
+                    let nd = dv + w;
+                    if d[x].is_none() || Some(nd) < d[x] {
+                        d[x] = Some(nd);
+                        q.push(MinScore(nd, x));
+                    }
+                }
+            }
+        }
+    }
+    d
 }
 
 /// O(n^2 log n + n m)
