@@ -50,7 +50,7 @@ pub fn count_spanning_tree_sparse<const M: u64>(adj: &[Vec<usize>], r: usize) ->
 }
 
 /// O(n (n + m)^2 log U) = O(n (n + m)^2 log(k n))
-pub fn k_disjoint_forest_partition(k: i64, n: usize, es: &[(usize, usize, i64)]) -> bool {
+pub fn arboricity(k: i64, n: usize, es: &[(usize, usize, i64)]) -> bool {
     let sm = es.iter().map(|&(_, _, c)| c).sum();
     if sm > k * (n as i64 - 1) {
         return false;

@@ -43,20 +43,7 @@ use std::io::{self, BufRead, BufWriter, Read, Write};
 
 const M: u64 = (119 << 23) + 1;
 
-fn main() {
-    let a = "0110";
-    let a1 = "1010";
-    let a2 = "0000";
-    let b = FPS::<M>::autocorrelation(a).normalize();
-    let b1 = FPS::<M>::autocorrelation(a1).normalize();
-    let b2 = FPS::<M>::autocorrelation(a2).normalize();
-    let c = (16 * b.eval(inv::<M>(2))).rem_euclid(M as i64);
-    let c1 = (16 * b1.eval(inv::<M>(2))).rem_euclid(M as i64);
-    let c2 = (16 * b2.eval(inv::<M>(2))).rem_euclid(M as i64);
-    println!("{}", c);
-    println!("{}", c1);
-    println!("{}", c2);
-}
+fn main() {}
 
 // TODO ORDER:
 // m √n blossom
