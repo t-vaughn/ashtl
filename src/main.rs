@@ -46,11 +46,18 @@ const M: u64 = (119 << 23) + 1;
 fn main() {}
 
 // TODO ORDER:
-// m √n blossom
-// cheeger partioning
+// line tree
+// top tree
+// redo CDQ, CDQ pow
 // ---------------------------------------------------------------------
 // O(log^2 n) dynamic connectivity https://loj.ac/s/2497274
-// fix circulation rounding https://courses.csail.mit.edu/6.854/20/sample-projects/A-/Rounding_Flows_Kang_Payor.pdf https://arxiv.org/pdf/1507.08139
+// p recursive algos
+// sum of 2 squares
+// sum of 3 squares
+// subtree LCT
+// tree iso
+// cheeger partioning
+// m √n blossom
 // dynamic rerooting tree dp
 // slope trick utils
 // mod linear shit
@@ -58,7 +65,6 @@ fn main() {}
 // Range Linear Add Range Min
 // Deque Operate All Composite
 // hampath heuristic
-// top tree
 // min ham cycle
 // hafnian
 // faster mod ops
@@ -74,19 +80,12 @@ fn main() {}
 // axiotis tzamos may be wrong
 // trie
 // online z
-// level ancestor
-// line tree
 // contour queries
 // hash on tree
-// tree iso
 // 3ecc
 // max clique
 // max coclique
 // convex polygon contains point
-// redo CDQ, CDQ pow
-// p recursive algos
 // tutte polynomial
-// sum of 2 squares
-// sum of 3 squares
 // dyanmic wavelet matrix
 // whatever this is https://judge.yosupo.jp/submission/138316

@@ -6,20 +6,22 @@ use std::{
 type U = u64;
 const B: usize = U::BITS as usize;
 
-pub struct RMQ<F: FnMut(usize, usize) -> Ordering> {
+pub struct RMQ<K: PartialOrd> {
     n: usize,
-    f: F,
+    key: Box<[K]>,
     mask: Vec<U>,
     st: Vec<usize>,
 }
 
-impl<F: FnMut(usize, usize) -> Ordering> RMQ<F> {
-    pub fn new(n: usize, mut f: F) -> Self {
+impl<K: PartialOrd> RMQ<K> {
+    pub fn new(key: impl Into<Box<[K]>>) -> Self {
+        let key = key.into();
+        let n = key.len();
         let mut curr_mask: U = 0;
         let mut mask = Vec::with_capacity(n);
         for i in 0..n {
             curr_mask = curr_mask << 1;
-            while curr_mask != 0 && f(i, i - curr_mask.trailing_zeros() as usize).is_lt() {
+            while curr_mask != 0 && key[i] < key[i - curr_mask.trailing_zeros() as usize] {
                 curr_mask &= curr_mask - 1;
             }
             curr_mask |= 1;
@@ -30,7 +32,7 @@ impl<F: FnMut(usize, usize) -> Ordering> RMQ<F> {
         let mut st = Vec::with_capacity(st_size);
         st.extend((0..n / B).map(|i| i * B + B - 1 - mask[i * B + B - 1].ilog2() as usize));
         st.resize(st_size, 0);
-        let mut min = |i, j| if f(i, j).is_le() { i } else { j };
+        let min = |i, j| if key[i] <= key[j] { i } else { j };
         for i in 1..=n_b_log {
             for j in 0..=n / B - (1 << i) {
                 st[i * n / B + j] = min(
@@ -39,10 +41,10 @@ impl<F: FnMut(usize, usize) -> Ordering> RMQ<F> {
                 )
             }
         }
-        Self { n, f, mask, st }
+        Self { n, key, mask, st }
     }
 
-    pub fn query(&mut self, range: impl RangeBounds<usize>) -> usize {
+    pub fn query(&self, range: impl RangeBounds<usize>) -> usize {
         let l = match range.start_bound() {
             Bound::Included(l) => *l,
             Bound::Excluded(l) => *l + 1,
@@ -61,7 +63,7 @@ impl<F: FnMut(usize, usize) -> Ordering> RMQ<F> {
             Ordering::Equal => return r - self.mask[r].ilog2() as usize,
             _ => (),
         }
-        let mut min = |i, j| if (self.f)(i, j).is_le() { i } else { j };
+        let min = |i, j| if self.key[i] <= self.key[j] { i } else { j };
         let mut ans = min(
             l + B - 1 - self.mask[l + B - 1].ilog2() as usize,
             r - self.mask[r].ilog2() as usize,

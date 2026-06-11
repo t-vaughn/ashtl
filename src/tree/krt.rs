@@ -1,6 +1,5 @@
 use super::lca::LCA;
 use crate::range::rmq::RMQ;
-use std::cmp::Ordering;
 
 /// Kruskal reconstruction tree
 pub struct KRT<F: FnMut(usize, usize, usize)> {
@@ -79,31 +78,16 @@ impl<F: FnMut(usize, usize, usize)> KRT<F> {
     }
 
     /// O(n) construction, O(1) query
-    pub fn leaf_pos_rmq(
-        &self,
-        pos: &[usize],
-    ) -> (
-        RMQ<impl FnMut(usize, usize) -> Ordering>,
-        RMQ<impl FnMut(usize, usize) -> Ordering>,
-    ) {
-        (
-            RMQ::new(self.n, |i, j| pos[i].cmp(&pos[j])),
-            RMQ::new(self.n, |i, j| pos[j].cmp(&pos[i])),
-        )
+    pub fn leaf_pos_rmq(&self, pos: &[usize]) -> (RMQ<usize>, RMQ<usize>) {
+        (RMQ::new(pos), RMQ::new(pos))
     }
 
     /// O(n) construction O(1) query
-    pub fn lca<'a>(
-        &'a self,
-        dfs: &'a [usize],
-        pos: &'a [usize],
-        depth: &'a [usize],
-    ) -> LCA<'a, impl FnMut(usize, usize) -> Ordering> {
+    pub fn lca<'a>(&'a self, dfs: &'a [usize], pos: &'a [usize], depth: &'a [usize]) -> LCA<'a> {
         let k = self.nxt;
         let mut z = Vec::with_capacity(k);
         z.extend((0..k).map(|i| depth[self.p[dfs[i]]]));
-        let lca = LCA::new(k, &self.p, dfs, pos, move |i, j| z[i].cmp(&z[j]));
-        lca
+        LCA::new(&self.p, dfs, pos, depth)
     }
 }
 
