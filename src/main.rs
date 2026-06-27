@@ -47,8 +47,13 @@ fn main() {}
 
 // TODO ORDER:
 // line tree
-// top tree
+// modular subset sum, apnp, erdos ginsburg ziv
 // redo CDQ, CDQ pow
+// top tree
+// Persistent Range Affine Range Sum
+// Range Linear Add Range Min
+// Deque Operate All Composite
+// hafnian
 // ---------------------------------------------------------------------
 // O(log^2 n) dynamic connectivity https://loj.ac/s/2497274
 // p recursive algos
@@ -61,12 +66,8 @@ fn main() {}
 // dynamic rerooting tree dp
 // slope trick utils
 // mod linear shit
-// Persistent Range Affine Range Sum
-// Range Linear Add Range Min
-// Deque Operate All Composite
 // hampath heuristic
 // min ham cycle
-// hafnian
 // faster mod ops
 // st numbering
 // ----------------------------------------------------------------------

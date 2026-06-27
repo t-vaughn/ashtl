@@ -1,5 +1,7 @@
 use super::lca::LCA;
 use crate::range::rmq::RMQ;
+use std::cmp::{Ordering, Reverse};
+use std::ops::Range;
 
 /// Kruskal reconstruction tree
 pub struct KRT<F: FnMut(usize, usize, usize)> {
@@ -93,6 +95,292 @@ impl<F: FnMut(usize, usize, usize)> KRT<F> {
 
 // TODO: line tree
 // https://codeforces.com/blog/entry/71568
+
+// /// A line tree of a weighted tree.
+// ///
+// /// `ord` is the vertex order on the line.
+// /// `pos[v]` is the position of original tree vertex `v` on the line.
+// /// For each `i`, line edge `i` lies between `ord[i]` and `ord[i + 1]`.
+// ///
+// /// `edge_idx[i]` is the original tree-edge id assigned to line edge `i`.
+// /// `edge_dir[i] = (a,b)` is the direction of that original tree edge when
+// /// crossing the line edge from left to right.
+// #[derive(Clone, Debug)]
+// pub struct LineTree {
+//     pub ord: Vec<usize>,
+//     pub pos: Vec<usize>,
+//     pub edge_idx: Vec<usize>,
+//     pub edge_dir: Vec<(usize, usize)>,
+// }
+
+// #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+// pub struct DirectedLineEdge {
+//     pub edge_idx: usize,
+//     pub from: usize,
+//     pub to: usize,
+// }
+
+// impl LineTree {
+//     /// O(n log n), or O(n) if the comparator is consistent with an already sorted order
+//     /// but this function still performs the sort.
+//     ///
+//     /// `tree_edges[eid] = (u,v)`.
+//     ///
+//     /// `cmp_edge(a,b)` must order edge ids by nondecreasing tree-edge weight.
+//     /// Ties may be broken arbitrarily.
+//     pub fn from_tree_by(
+//         n: usize,
+//         tree_edges: &[(usize, usize)],
+//         mut cmp_edge: impl FnMut(usize, usize) -> Ordering,
+//     ) -> Self {
+//         assert_eq!(
+//             tree_edges.len(),
+//             n.saturating_sub(1),
+//             "LineTree::from_tree_by expects a tree: got n={} and {} edges",
+//             n,
+//             tree_edges.len()
+//         );
+
+//         let mut order: Vec<usize> = (0..tree_edges.len()).collect();
+
+//         order.sort_unstable_by(|&a, &b| cmp_edge(a, b).then_with(|| a.cmp(&b)));
+
+//         Self::from_tree_sorted(n, tree_edges, &order)
+//     }
+
+//     /// O(n), assuming `order` lists the tree edges in nondecreasing weight.
+//     ///
+//     /// This is the direct linked-list/DSU construction of the line tree.
+//     pub fn from_tree_sorted(n: usize, tree_edges: &[(usize, usize)], order: &[usize]) -> Self {
+//         assert_eq!(
+//             tree_edges.len(),
+//             n.saturating_sub(1),
+//             "LineTree::from_tree_sorted expects a tree: got n={} and {} edges",
+//             n,
+//             tree_edges.len()
+//         );
+//         assert_eq!(order.len(), tree_edges.len());
+
+//         if n == 0 {
+//             return Self {
+//                 ord: Vec::new(),
+//                 pos: Vec::new(),
+//                 edge_idx: Vec::new(),
+//                 edge_dir: Vec::new(),
+//             };
+//         }
+
+//         if n == 1 {
+//             return Self {
+//                 ord: vec![0],
+//                 pos: vec![0],
+//                 edge_idx: Vec::new(),
+//                 edge_dir: Vec::new(),
+//             };
+//         }
+
+//         fn find(dsu: &mut [usize], mut x: usize) -> usize {
+//             let mut r = x;
+//             while dsu[r] != r {
+//                 r = dsu[r];
+//             }
+//             while dsu[x] != x {
+//                 let p = dsu[x];
+//                 dsu[x] = r;
+//                 x = p;
+//             }
+//             r
+//         }
+
+//         let mut dsu: Vec<usize> = (0..n).collect();
+//         let mut size = vec![1usize; n];
+
+//         // Linked list of the current line order for each DSU component root.
+//         let mut head: Vec<usize> = (0..n).collect();
+//         let mut tail: Vec<usize> = (0..n).collect();
+
+//         // If `next_vertex[x] != usize::MAX`, then in the final line order
+//         // vertex `x` is followed by `next_vertex[x]`.
+//         let mut next_vertex = vec![usize::MAX; n];
+
+//         // Data for the line edge from `x` to `next_vertex[x]`.
+//         let mut next_edge_idx = vec![usize::MAX; n];
+//         let mut next_edge_dir = vec![(usize::MAX, usize::MAX); n];
+
+//         let mut unions = 0usize;
+
+//         for &eid in order {
+//             assert!(eid < tree_edges.len());
+
+//             let (mut u, mut v) = tree_edges[eid];
+
+//             assert!(
+//                 u < n && v < n,
+//                 "tree edge {} has endpoint outside 0..{}: ({},{})",
+//                 eid,
+//                 n,
+//                 u,
+//                 v
+//             );
+
+//             let mut ru = find(&mut dsu, u);
+//             let mut rv = find(&mut dsu, v);
+
+//             assert_ne!(
+//                 ru, rv,
+//                 "LineTree::from_tree_sorted received a non-tree ordering/input: edge {} closes a cycle",
+//                 eid
+//             );
+
+//             // Union by size. If we swap components, also swap the original edge
+//             // direction so that `u -> v` always points from the left component
+//             // to the right component in the newly concatenated line.
+//             if size[ru] < size[rv] {
+//                 std::mem::swap(&mut ru, &mut rv);
+//                 std::mem::swap(&mut u, &mut v);
+//             }
+
+//             // Concatenate line(ru) + edge eid + line(rv).
+//             let left_tail = tail[ru];
+//             let right_head = head[rv];
+
+//             next_vertex[left_tail] = right_head;
+//             next_edge_idx[left_tail] = eid;
+//             next_edge_dir[left_tail] = (u, v);
+
+//             tail[ru] = tail[rv];
+//             size[ru] += size[rv];
+//             dsu[rv] = ru;
+
+//             unions += 1;
+//         }
+
+//         assert_eq!(
+//             unions,
+//             n - 1,
+//             "LineTree::from_tree_sorted did not connect all vertices"
+//         );
+
+//         let root = find(&mut dsu, 0);
+//         assert_eq!(
+//             size[root], n,
+//             "LineTree::from_tree_sorted input was not connected"
+//         );
+
+//         let mut ord = Vec::with_capacity(n);
+//         let mut pos = vec![usize::MAX; n];
+//         let mut edge_idx = Vec::with_capacity(n - 1);
+//         let mut edge_dir = Vec::with_capacity(n - 1);
+
+//         let mut x = head[root];
+
+//         loop {
+//             pos[x] = ord.len();
+//             ord.push(x);
+
+//             let y = next_vertex[x];
+//             if y == usize::MAX {
+//                 break;
+//             }
+
+//             edge_idx.push(next_edge_idx[x]);
+//             edge_dir.push(next_edge_dir[x]);
+
+//             x = y;
+//         }
+
+//         assert_eq!(ord.len(), n);
+//         assert_eq!(edge_idx.len(), n - 1);
+//         assert_eq!(edge_dir.len(), n - 1);
+
+//         Self {
+//             ord,
+//             pos,
+//             edge_idx,
+//             edge_dir,
+//         }
+//     }
+
+//     /// Convenience constructor when weights are stored separately.
+//     pub fn from_tree_weights<K: Ord>(
+//         n: usize,
+//         tree_edges: &[(usize, usize)],
+//         weight: &[K],
+//     ) -> Self {
+//         assert_eq!(tree_edges.len(), weight.len());
+
+//         Self::from_tree_by(n, tree_edges, |a, b| weight[a].cmp(&weight[b]))
+//     }
+
+//     /// The line-edge range corresponding to the path between `u` and `v`.
+//     ///
+//     /// Line edge `i` lies between `ord[i]` and `ord[i + 1]`, so if
+//     /// `pos[u] < pos[v]`, the relevant edge range is `pos[u]..pos[v]`.
+//     pub fn edge_range(&self, u: usize, v: usize) -> Option<Range<usize>> {
+//         let mut l = self.pos[u];
+//         let mut r = self.pos[v];
+
+//         if l == r {
+//             return None;
+//         }
+
+//         if l > r {
+//             std::mem::swap(&mut l, &mut r);
+//         }
+
+//         Some(l..r)
+//     }
+
+//     /// Build an RMQ for path maximum queries on the line.
+//     ///
+//     /// Since your `RMQ<K>` is a range-min structure, this stores `Reverse(key)`.
+//     pub fn max_edge_rmq<K: Ord>(&self, mut key: impl FnMut(usize) -> K) -> RMQ<Reverse<K>> {
+//         let a: Vec<Reverse<K>> = self.edge_idx.iter().map(|&eid| Reverse(key(eid))).collect();
+
+//         RMQ::new(a)
+//     }
+
+//     /// Returns an original edge id attaining the maximum key on the original
+//     /// tree path between `u` and `v`.
+//     pub fn max_edge_with_rmq<K: Ord>(
+//         &self,
+//         u: usize,
+//         v: usize,
+//         rmq: &RMQ<Reverse<K>>,
+//     ) -> Option<usize> {
+//         let range = self.edge_range(u, v)?;
+//         let p = rmq.query(range);
+//         Some(self.edge_idx[p])
+//     }
+
+//     /// Same as `max_edge_with_rmq`, but returns the original tree edge directed
+//     /// from the query source side toward the query target side.
+//     pub fn directed_max_edge_with_rmq<K: Ord>(
+//         &self,
+//         u: usize,
+//         v: usize,
+//         rmq: &RMQ<Reverse<K>>,
+//     ) -> Option<DirectedLineEdge> {
+//         let range = self.edge_range(u, v)?;
+//         let p = rmq.query(range);
+
+//         let (a, b) = self.edge_dir[p];
+
+//         if self.pos[u] <= self.pos[v] {
+//             Some(DirectedLineEdge {
+//                 edge_idx: self.edge_idx[p],
+//                 from: a,
+//                 to: b,
+//             })
+//         } else {
+//             Some(DirectedLineEdge {
+//                 edge_idx: self.edge_idx[p],
+//                 from: b,
+//                 to: a,
+//             })
+//         }
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
